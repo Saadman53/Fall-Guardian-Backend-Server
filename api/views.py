@@ -10,6 +10,7 @@ from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
 # List all stocks or create new one 
 #stocks/
+import os
 from django.views.decorators.csrf import csrf_exempt
 import pandas as pd
 import joblib
@@ -206,7 +207,7 @@ def data_list(request):
         df = pd.DataFrame.from_records(data)
         df['rel_time'] = (df['timestamp']-df.loc[0]['timestamp'])/1000.0
        
-
+        #print(os.getcwd())
 
         has_fall = 0.0
 
