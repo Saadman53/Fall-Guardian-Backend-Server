@@ -110,7 +110,7 @@ def predict_both(fol):
 	data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'f7':f7,'f8':f8,'gyro_max':gyro_max,'kurt_acc':kurt_acc,'kurt_gyro':kurt_gyro,'lin_max':lin_max,'skew_acc':skew_acc,'skew_gyro':skew_gyro}
 	data = pd.Series(data)
 	data = [data]
-	print(data)
+	#print(data)
 	ret=0.0
 	if(f6==0):
 		ret=0.0
