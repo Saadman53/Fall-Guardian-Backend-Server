@@ -10,11 +10,23 @@ from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
 # List all stocks or create new one 
 #stocks/
-import os
 from django.views.decorators.csrf import csrf_exempt
 import pandas as pd
 import joblib
 from django.conf import settings
+import pickle as p
+from os import path
+import os
+
+
+path_n = path.abspath(__file__) # full path of your script
+dir_path = path.dirname(path_n) # full path of the directory of your script
+file_path1 = path.join(dir_path,'fall_predict_acc.pkl') # pkl file path
+#model1 = p.load(open(file_path1,'rb'))
+model1 = joblib.load(file_path1)
+file_path2 = path.join(dir_path,'fall_predict_both.pkl') # pkl file path
+model2 = joblib.load(file_path2)
+
 
 
 def mag(df,x,y,z):
@@ -23,8 +35,7 @@ def mag(df,x,y,z):
 def agv(df,gx,gy,gz,lx,ly,lz,gmod):
     return (df[gx]*df[lx]+df[gy]*df[ly]+df[gz]*df[lz])/(df[gmod]*df[gmod])
 
-def predict_both(fol,path):
-	model = joblib.load(path+"fall_predict_both.pkl")
+def predict_both(fol):
 	#initializing values
 	fol['l_x'] = fol['acc_x'] - fol['grav_x']
 	fol['l_y'] = fol['acc_y'] - fol['grav_y']
@@ -104,7 +115,7 @@ def predict_both(fol,path):
 	if(f6==0):
 		ret=0.0
 	else:
-		preds=model.predict(data)
+		preds=model2.predict(data)
 		# if(preds>=0.7):
 		# 	ret=preds
 		# else:
@@ -113,8 +124,7 @@ def predict_both(fol,path):
 
 	return ret
 
-def predict_acc(fol,path):
-	model = joblib.load(path+"fall_predict_acc.pkl")	
+def predict_acc(fol):
 	#initializing values
 	fol['l_x'] = fol['acc_x'] - fol['grav_x']
 	fol['l_y'] = fol['acc_y'] - fol['grav_y']
@@ -190,7 +200,7 @@ def predict_acc(fol,path):
 	if(f6==0):
 		ret=0.0
 	else:
-		preds=model.predict(data)
+		preds=model1.predict(data)
 		# if(preds>=0.7):
 		# 	ret=preds
 		# else:
@@ -207,20 +217,16 @@ def data_list(request):
         df = pd.DataFrame.from_records(data)
         df['rel_time'] = (df['timestamp']-df.loc[0]['timestamp'])/1000.0
        
-        #print(os.getcwd())
+       # print("here is the desired path {}".format(os.getcwd()))
 
         has_fall = 0.0
-
-        path = settings.BASE_DIR
-        path = str(path)+"\\api\\"
-
         #print(df.columns.size)
         if(df.columns.size==11):
         	#for both gyro and acc
-        	has_fall = predict_both(df,path)
+        	has_fall = predict_both(df)
         elif(df.columns.size==8):
         	#for onlt acc
-        	has_fall = predict_acc(df,path)
+        	has_fall = predict_acc(df)
         
         print('response send: {}'.format(has_fall))
         fall = {
