@@ -120,7 +120,7 @@ def predict_both(fol):
 		# 	ret=preds
 		# else:
 		# 	ret=preds
-		ret = preds
+		ret = preds[0]
 
 	return ret
 
