@@ -224,7 +224,7 @@ def data_list(request):
         	#for onlt acc
         	has_fall = predict_acc(df)
         print('response send: {}'.format(has_fall["fall"]))
-        has_fall = {"fall":int(0)}
+        #has_fall = {"fall":int(0)}
         
         return JsonResponse(has_fall, safe=False)
 
