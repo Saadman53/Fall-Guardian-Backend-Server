@@ -23,13 +23,24 @@ import math
 from scipy.signal import find_peaks, peak_prominences, peak_widths
 
 
-path_n = path.abspath(__file__) # full path of your script
-dir_path = path.dirname(path_n) # full path of the directory of your script
-file_path1 = path.join(dir_path,'new_svm_acc5.pkl') # pkl file path
-model1 = joblib.load(file_path1)
-file_path2 = path.join(dir_path,'new_svm2.pkl') # pkl file path
-model2 = joblib.load(file_path2)
+# path_n = path.abspath(__file__) # full path of your script
+# dir_path = path.dirname(path_n) # full path of the directory of your script
+# file_path1 = path.join(dir_path,'new_svm_acc5.pkl') # pkl file path
+# file_path11 = path.join(dir_path,'final_svm_acc.pkl')
+# #model1 = joblib.load(file_path11)
+# file_path2 = path.join(dir_path,'new_svm2.pkl') # pkl file path
+# file_path22 = path.join(dir_path,'final_svm_all.pkl')
+# #model2 = joblib.load(file_path22)
+w_acc = [ 0.29532642,-0.05355093,0.15279751,-0.0696737,-0.27507482,0.3590252,0.62624295]
+b_acc = 8.397000000000785
+w_all = [ 0.31132593,-0.07801587,0.09794796,-0.32345425,-0.07173864,0.13417778,-0.11686499,0.28469475,0.16275261,0.27922792,0.42917821]
+b_all = 8.571000000000689
 
+def predict(X,w,b):
+	approx = np.dot(X,w)-b
+	approx = np.sign(approx)
+	approx = np.where(approx==-1,0,1)
+	return approx
 
 
 def mag(df,x,y,z):
@@ -111,14 +122,14 @@ def predict_both(fol):
 		tGyro_max = df.loc[i]['gyro_max'] - df.loc[i+2]['gyro_max']
 		y_max = df.iloc[i]['q']
 		y_min = df.iloc[i+2]['q']
-		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'gyro_max':gyro_max,'kurt_acc':kurt_acc,'kurt_gyro':kurt_gyro,'lin_max':lin_max,'skew_acc':skew_acc,'skew_gyro':skew_gyro,"tLin_max":tLin_max,"tGyro_max":tGyro_max}
+		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'gyro_max':gyro_max,'kurt_acc':kurt_acc,'kurt_gyro':kurt_gyro,'lin_max':lin_max,'skew_acc':skew_acc,'skew_gyro':skew_gyro,"tGyro_max":tGyro_max,"tLin_max":tLin_max}
 		data = pd.Series(data)
 		data = [data]
-		preds=model2.predict(data)
+		preds=predict(data,w_all,b_all)
 		ret = preds[0]
 		if(ret==1):
 			if((abs(y_min))>7):
-				print("[Fall but not Fall]")
+				print("[Not actually a fall]")
 				ret = 0
 	return {"fall":int(ret)}
 
@@ -196,12 +207,16 @@ def predict_acc(fol):
 		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'kurt_acc':kurt_acc,'lin_max':lin_max,'skew_acc':skew_acc,"tLin_max":tLin_max}
 		data = pd.Series(data)
 		data = [data]
-		preds=model1.predict(data)
+		#preds=model1.predict(data)
+		preds=predict(data,w_acc,b_acc)
 		ret = preds[0]
 		if(ret==1):
+			print("fall")
 			if((abs(y_min))>7):
-				print("[Fall but not Fall]")
+				print("[Not actually a fall]")
 				ret = 0
+			else:
+				print("[Fall occured] {}".format(abs(y_min)))
 	return {"fall":int(ret)}
 
 
