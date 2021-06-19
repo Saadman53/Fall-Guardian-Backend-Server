@@ -8,8 +8,6 @@ from .serializers import DataSerializer
 from rest_framework.decorators import api_view
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser 
-# List all stocks or create new one 
-#stocks/
 from django.views.decorators.csrf import csrf_exempt
 import pandas as pd
 import joblib
@@ -20,7 +18,7 @@ from os import path
 from scipy import signal
 import os
 import math
-from scipy.signal import find_peaks, peak_prominences, peak_widths
+from scipy.signal import find_peaks, peak_prominences, peak_widths, lfilter
 
 
 # path_n = path.abspath(__file__) # full path of your script
@@ -49,18 +47,26 @@ def mag(df,x,y,z):
 def agv(df,gx,gy,gz,lx,ly,lz,gmod):
     return (df[gx]*df[lx]+df[gy]*df[ly]+df[gz]*df[lz])/(df[gmod]*df[gmod])
 
-
+def gravlin(fol,acc,length):
+    g = [None]*length
+    g = np.array(g)
+    l = [None]*length
+    l = np.array(l)
+    g = lfilter([0.2],[1.0,-0.8],fol[acc])
+    l = fol[acc]-g
+    return pd.Series(g,index = fol.index),pd.Series(l,index = fol.index)
 
 
 def predict_both(fol):
 	#initializing values
 	x = fol.copy()
-	x = x[['acc_x','acc_y','acc_z','grav_x','grav_y','grav_z','gyro_x','gyro_y','gyro_z']]
+	length = x.shape[0]
+	x['grav_x'], x['l_x'] = gravlin(x,"acc_x",length)
+	x['grav_y'], x['l_y'] = gravlin(x,"acc_y",length)
+	x['grav_z'], x['l_z'] = gravlin(x,"acc_z",length)
+	x = x[['acc_x','acc_y','acc_z','grav_x','grav_y','grav_z','l_x','l_y','l_z','gyro_x','gyro_y','gyro_z']]
 	x = x.rolling(10,min_periods=1).mean()
 	x['rel_time'] = fol['rel_time']
-	x['l_x'] = x['acc_x'] - x['grav_x']
-	x['l_y'] = x['acc_y'] - x['grav_y']
-	x['l_z'] = x['acc_z'] - x['grav_z']
 	x['acc_mag'] = mag(x,"acc_x","acc_y","acc_z")
 	x['grav_mag'] = mag(x,"grav_x","grav_y","grav_z")
 	x['lin_mag'] = mag(x,"l_x","l_y","l_z")
@@ -81,29 +87,14 @@ def predict_both(fol):
 		t_e = int(t_e)
 		for t in range(t_s,6):
 			y = x[(x['rel_time']>=t) & (x['rel_time']<(t+1))]
-			size = y.shape[0]
-			time = t
 			i = y['acc_mag'].idxmax()
 			acc_max = y['acc_mag'].max()
-			acc_min = y['acc_mag'].min()
-			acc_mean = y['acc_mag'].mean()
 			agv_max = y['agv'].max()
 			agv_min = y['agv'].min()
 			lin_max = y['lin_mag'].max()
-			lin_min = y['lin_mag'].min()
-			lin_mean = y['lin_mag'].mean()
-			grav_max = y['grav_mag'].max()
-			grav_min = y['grav_mag'].min()
 			gyro_max = y['gyro_mag'].max()
-			gyro_min = y['gyro_mag'].min()
-			z_max = max(y['acc_z'].max(),abs(y['acc_z'].min()))
-			z_mean = y['acc_z'].mean()
-			peaks, _ = find_peaks(y['acc_mag'])
-			BPC = (y.iloc[peaks]['acc_mag']>=16.0).sum()
-			p = y.loc[i]['acc_x']
 			q = y.loc[i]['acc_y']
-			r = y.loc[i]['acc_z']
-			df = df.append({'time':time,'acc_max':acc_max,'acc_min':acc_min,'acc_mean':acc_mean,'agv_max':agv_max,'agv_min':agv_min,'lin_max':lin_max,'lin_min':lin_min,'grav_max':grav_max,'grav_min':grav_min,'gyro_max':gyro_max,'gyro_min':gyro_min,'z_max':z_max,'z_mean':z_mean,"BPC":BPC,"p":p,"q":q,"r":r},ignore_index=True)
+			df = df.append({'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'lin_max':lin_max,'gyro_max':gyro_max,"q":q},ignore_index=True)
 		i = df["acc_max"].idxmax()
 		acc_max = df.iloc[i]['acc_max']
 		lin_max = df.iloc[i]['lin_max']
@@ -120,7 +111,6 @@ def predict_both(fol):
 		kurt_gyro = x['gyro_mag'].kurtosis()
 		tLin_max = df.loc[i]['lin_max'] - df.loc[i+2]['lin_max']
 		tGyro_max = df.loc[i]['gyro_max'] - df.loc[i+2]['gyro_max']
-		y_max = df.iloc[i]['q']
 		y_min = df.iloc[i+2]['q']
 		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'gyro_max':gyro_max,'kurt_acc':kurt_acc,'kurt_gyro':kurt_gyro,'lin_max':lin_max,'skew_acc':skew_acc,'skew_gyro':skew_gyro,"tGyro_max":tGyro_max,"tLin_max":tLin_max}
 		data = pd.Series(data)
@@ -139,7 +129,11 @@ def predict_both(fol):
 def predict_acc(fol):
 	#initializing values
 	x = fol.copy()
-	x = x[['acc_x','acc_y','acc_z','grav_x','grav_y','grav_z']]
+	length = x.shape[0]
+	x['grav_x'], x['l_x'] = gravlin(x,"acc_x",length)
+	x['grav_y'], x['l_y'] = gravlin(x,"acc_y",length)
+	x['grav_z'], x['l_z'] = gravlin(x,"acc_z",length)
+	x = x[['acc_x','acc_y','acc_z','grav_x','grav_y','grav_z','l_x','l_y','l_z']]
 	x = x.rolling(10,min_periods=1).mean()
 	x['rel_time'] = fol['rel_time']
 	x['l_x'] = x['acc_x'] - x['grav_x']
@@ -163,33 +157,13 @@ def predict_acc(fol):
 		t_e = int(t_e)
 		for t in range(t_s,6):
 			y = x[(x['rel_time']>=t) & (x['rel_time']<(t+1))]
-			size = y.shape[0]
-			time = t
 			i = y['acc_mag'].idxmax()
 			acc_max = y['acc_mag'].max()
-			acc_min = y['acc_mag'].min()
-			acc_mean = y['acc_mag'].mean()
 			agv_max = y['agv'].max()
 			agv_min = y['agv'].min()
 			lin_max = y['lin_mag'].max()
-			lin_min = y['lin_mag'].min()
-			lin_mean = y['lin_mag'].mean()
-			grav_max = y['grav_mag'].max()
-			grav_min = y['grav_mag'].min()
-			z_min = y['acc_z'].min()
-			z_max = y['acc_z'].max()
-			p = y.loc[i]['acc_x']
 			q = y.loc[i]['acc_y']
-			r = y.loc[i]['acc_z']
-			if(abs(z_min)>z_max):
-				z_max = z_min
-			y_min = y['acc_y'].min()
-			y_max = y['acc_y'].max()
-			if(abs(y_min)>y_max):
-				y_max = y_min
-			peaks, _ = find_peaks(y['acc_mag'])
-			BPC = (y.iloc[peaks]['acc_mag']>=16.0).sum()
-			df = df.append({'time':time,'acc_max':acc_max,'acc_min':acc_min,'acc_mean':acc_mean,'agv_max':agv_max,'agv_min':agv_min,'lin_max':lin_max,'lin_min':lin_min,'grav_max':grav_max,'grav_min':grav_min,"y_max":y_max,'z_max':z_max,"BPC":BPC,'p':p,'q':q,'r':r},ignore_index=True)
+			df = df.append({'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'lin_max':lin_max,'q':q},ignore_index=True)
 		i = df["acc_max"].idxmax()
 		acc_max = df.iloc[i]['acc_max']
 		lin_max = df.iloc[i]['lin_max']
@@ -202,7 +176,6 @@ def predict_acc(fol):
 		skew_acc = x['acc_mag'].skew()
 		kurt_acc = x['acc_mag'].kurtosis()
 		tLin_max = df.loc[i]['lin_max'] - df.loc[i+2]['lin_max']
-		y_max = df.iloc[i]['q']
 		y_min = df.iloc[i+2]['q']
 		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'kurt_acc':kurt_acc,'lin_max':lin_max,'skew_acc':skew_acc,"tLin_max":tLin_max}
 		data = pd.Series(data)
@@ -232,10 +205,10 @@ def data_list(request):
 
         has_fall = 0.0
         #print(df.columns.size)
-        if(df.columns.size==11):
+        if(df.columns.size==8):
         	#for both gyro and acc
         	has_fall = predict_both(df)
-        elif(df.columns.size==8):
+        elif(df.columns.size==5):
         	#for onlt acc
         	has_fall = predict_acc(df)
         print('response send: {}'.format(has_fall["fall"]))
