@@ -21,14 +21,14 @@ import math
 from scipy.signal import find_peaks, peak_prominences, peak_widths, lfilter
 
 
-# path_n = path.abspath(__file__) # full path of your script
-# dir_path = path.dirname(path_n) # full path of the directory of your script
-# file_path1 = path.join(dir_path,'new_svm_acc5.pkl') # pkl file path
-# file_path11 = path.join(dir_path,'final_svm_acc.pkl')
-# #model1 = joblib.load(file_path11)
-# file_path2 = path.join(dir_path,'new_svm2.pkl') # pkl file path
-# file_path22 = path.join(dir_path,'final_svm_all.pkl')
-# #model2 = joblib.load(file_path22)
+path_n = path.abspath(__file__) # full path of your script
+dir_path = path.dirname(path_n) # full path of the directory of your script
+file_path1 = path.join(dir_path,'knn_acc.pkl') # pkl file path
+model1 = joblib.load(file_path1)
+
+file_path2 = path.join(dir_path,'knn_both.pkl') # pkl file path
+model2 = joblib.load(file_path2)
+
 w_acc = [ 0.29532642,-0.05355093,0.15279751,-0.0696737,-0.27507482,0.3590252,0.62624295]
 b_acc = 8.397000000000785
 w_all = [ 0.31132593,-0.07801587,0.09794796,-0.32345425,-0.07173864,0.13417778,-0.11686499,0.28469475,0.16275261,0.27922792,0.42917821]
@@ -115,7 +115,7 @@ def predict_both(fol):
 		data={'acc_max':acc_max,'agv_max':agv_max,'agv_min':agv_min,'gyro_max':gyro_max,'kurt_acc':kurt_acc,'kurt_gyro':kurt_gyro,'lin_max':lin_max,'skew_acc':skew_acc,'skew_gyro':skew_gyro,"tGyro_max":tGyro_max,"tLin_max":tLin_max}
 		data = pd.Series(data)
 		data = [data]
-		preds=predict(data,w_all,b_all)
+		preds=model2.predict(data)
 		ret = preds[0]
 		if(ret==1):
 			if((abs(y_min))>7):
@@ -149,6 +149,8 @@ def predict_acc(fol):
 	start_time = x.head(1).iloc[0]['rel_time']
 	time = final_time - start_time
 	ret = 0
+	print("start time: {}\nend time: {}\nmax_time: {}\nmax_val: {}".format(start_time,final_time,max_time,max_acc))
+
 	if((max_time>3.0) & (max_time<4.0) & (time<7)):
 		df = pd.DataFrame()
 		t_s = x.loc[0]['rel_time']
@@ -181,7 +183,7 @@ def predict_acc(fol):
 		data = pd.Series(data)
 		data = [data]
 		#preds=model1.predict(data)
-		preds=predict(data,w_acc,b_acc)
+		preds=model1.predict(data)
 		ret = preds[0]
 		if(ret==1):
 			print("fall")
