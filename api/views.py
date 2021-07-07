@@ -23,10 +23,10 @@ from scipy.signal import find_peaks, peak_prominences, peak_widths, lfilter
 
 path_n = path.abspath(__file__) # full path of your script
 dir_path = path.dirname(path_n) # full path of the directory of your script
-file_path1 = path.join(dir_path,'knn_acc.pkl') # pkl file path
+file_path1 = path.join(dir_path,'rf_acc.pkl') # pkl file path
 model1 = joblib.load(file_path1)
 
-file_path2 = path.join(dir_path,'knn_both.pkl') # pkl file path
+file_path2 = path.join(dir_path,'rf_both.pkl') # pkl file path
 model2 = joblib.load(file_path2)
 
 w_acc = [ 0.29532642,-0.05355093,0.15279751,-0.0696737,-0.27507482,0.3590252,0.62624295]
