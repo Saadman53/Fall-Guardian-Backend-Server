@@ -1,4 +1,4 @@
-# Software-Development-Project-Django
+# Fall-Guardian-Backend-Server
 Django local server that handles requests from android. The features include:
 1. Created using Django.
 2. A RESTful API service.
